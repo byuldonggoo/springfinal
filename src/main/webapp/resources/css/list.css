@@ -1,0 +1,11 @@
+@charset "UTF-8";
+
+@font-face { /* 애플산돌고딕 폰트 적용 */
+  font-family: "PoorStroy";
+  src: url("${path}/resources/font/PoorStory-Regular.ttf") format("truetype");
+  font-weight: normal;
+} 
+
+* {
+  font-family: 'PoorStroy', serif;
+}

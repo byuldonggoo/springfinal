@@ -1,0 +1,127 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<!DOCTYPE mapper
+  PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+  "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.spring.mapper.BoardMapper">  <!-- BoardVO 임포트해서 쓸수있게 지정 -->
+
+	<sql id="criteria">
+			<trim prefix="(" suffix=") AND " prefixOverrides="OR">
+				<foreach item='type' collection="typeArr">
+					<trim prefix="OR">
+						<choose>
+							<when test="type == 'T'.toString()">
+								bdtitle like '%'||#{keyword}||'%'
+							</when>
+							<when test="type == 'C'.toString()">
+								content like '%'||#{keyword}||'%'
+							</when>
+							<when test="type == 'W'.toString()">
+								writer like '%'||#{keyword}||'%'
+							</when>
+						</choose>
+					</trim>
+				</foreach>
+			</trim>
+		</sql>
+
+	<!-- delcheck(삭제여부)가 N인 모든 게시글 리스트 가져오기 글을 삭제하면 
+	delcheck를 Y로 변경해서 화면에 안나오게 한다.  -->
+	<select id="getList" resultType="com.spring.domain.BoardVO">
+	<![CDATA[
+		select * from main_board where bdnum > 0 and delcheck='N'
+		]]>
+	</select>
+	
+	<insert id="insert">
+		insert into main_board (bdnum, bdtitle,content,writer,regdate,delcheck)
+		values (board_seq.nextval, #{bdtitle}, #{content}, #{writer},sysdate, #{delcheck})
+	</insert>
+
+	
+	<insert id="insertSelectKey">
+		<!-- SelectKey어노테이션 이용 PK값을 미리 SQL을 통해서 처리해두고 특정한 이름으로 결과보관-->
+		<selectKey keyProperty="bdnum" order="BEFORE"
+			resultType="long">
+			select board_seq.nextval from dual
+		</selectKey>
+
+		insert into main_board (bdnum, bdtitle,content,writer,regdate,delcheck)
+		values (#{bdnum},#{bdtitle}, #{content}, #{writer},sysdate,#{delcheck})
+	</insert>
+	
+	<select id="read" resultType="com.spring.domain.BoardVO">
+		select * from main_board where bdnum = #{bdnum}
+	</select>
+	
+	<!-- 글을 지우면 데이터베이스에서 지우지말고
+	delcheck값을 Y로 바꿔서 화면에 안나오게 -->
+	<update id="delete">
+		update main_board 
+		set delcheck='Y'
+		where bdnum = #{bdnum}
+	</update>
+	
+	<!-- 수정시각correcdate를 현재각으로sysdate -->
+	<update id="update">
+		update main_board
+		set bdtitle= #{bdtitle},
+		content= #{content},
+		writer = #{writer},
+		correcdate = sysdate
+		where bdnum = #{bdnum}
+	</update>
+	
+	
+	<!-- 페이징을 포함한 get -->
+	<select id="getListWithPaging"
+		resultType="com.spring.domain.BoardVO">
+  <![CDATA[
+  select 
+    bdnum, bdtitle, content, writer, regdate, correcdate, delcheck
+  from 
+      (
+      select /*+INDEX_DESC(main_board pk_board) */ 
+        rownum rn, bdnum, bdtitle, content, writer, regdate, correcdate, delcheck
+      from 
+        main_board
+      where delcheck='N' and 
+  ]]>
+		<trim prefix="(" suffix=") AND " prefixOverrides="OR">
+			<foreach item='type' collection="typeArr">
+				<trim prefix="OR">
+					<choose>
+						<when test="type == 'T'.toString()">
+							bdtitle like '%'||#{keyword}||'%'
+						</when>
+						<when test="type == 'C'.toString()">
+							content like '%'||#{keyword}||'%'
+						</when>
+						<when test="type == 'W'.toString()">
+							writer like '%'||#{keyword}||'%'
+						</when>
+					</choose>
+				</trim>
+			</foreach>
+		</trim>
+      
+  <![CDATA[    
+      rownum <= #{pageNum} * #{amount}
+      )
+  where rn > (#{pageNum} -1) * #{amount}   
+  ]]>
+	</select>
+
+	
+	<!-- 페이징을 위해 게시물 총 갯수를 센다
+	delcheck가 Y인 게시물(삭제된)은 세지 않는다. -->
+	<select id="getTotalCount" resultType="int">
+		select count(*) from main_board 
+		where
+		<include refid="criteria"></include> 
+		
+		bdnum > 0 and delcheck='N'
+	</select>
+	
+	
+</mapper>
